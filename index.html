@@ -1,0 +1,973 @@
+<!DOCTYPE html><html lang="en"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CyberSherlock — AI-Assisted External Attack Surface Management</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    /* ── Reset ─────────────────────────────────────────── */
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --navy:#080d1c;
+      --navy2:#0c1428;
+      --card:#0f1a33;
+      --card2:#111d38;
+      --blue:#0057ff;
+      --cyan:#00d4ff;
+      --cyan2:#00b4d8;
+      --accent:#00f5c4;
+      --red:#ff4d6a;
+      --yellow:#ffd166;
+      --white:#fff;
+      --g1:#e2e8f0;
+      --g2:#94a3b8;
+      --g3:#475569;
+      --g4:#1e2d50;
+      --border:rgba(0,212,255,.10);
+      --border2:rgba(0,212,255,.22);
+      --glow:rgba(0,87,255,.18);
+      --r:12px;--rl:20px;--rxl:28px;
+    }
+    html{scroll-behavior:smooth}
+    body{font-family:'Inter',system-ui,sans-serif;background:var(--navy);color:var(--white);overflow-x:hidden;line-height:1.65}
+    a{text-decoration:none;color:inherit}
+    img{display:block;max-width:100%;border-radius:var(--r)}
+    ::-webkit-scrollbar{width:5px}
+    ::-webkit-scrollbar-track{background:var(--navy)}
+    ::-webkit-scrollbar-thumb{background:var(--cyan2);border-radius:99px}
+
+    /* ── Layout ─────────────────────────────────────────── */
+    .container{max-width:1140px;margin:0 auto;padding:0 24px}
+    section{position:relative;z-index:1;padding:96px 0}
+    .alt-bg{background:rgba(11,19,42,.7)}
+
+    /* ── Type helpers ────────────────────────────────────── */
+    .chip{
+      display:inline-flex;align-items:center;gap:8px;
+      background:rgba(0,212,255,.08);border:1px solid var(--border2);
+      color:var(--cyan);font-size:10px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;
+      padding:6px 14px;border-radius:99px;margin-bottom:20px
+    }
+    .chip::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--cyan);animation:blink 1.4s infinite}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+    .section-title{font-size:clamp(28px,4vw,44px);font-weight:900;line-height:1.12;letter-spacing:-.5px}
+    .section-sub{font-size:15px;color:var(--g2);margin-top:14px;max-width:580px}
+    .text-center{text-align:center}
+    .text-center .section-sub{margin-left:auto;margin-right:auto}
+    .grad{background:linear-gradient(135deg,var(--cyan),var(--blue) 50%,var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .cyan-c{color:var(--cyan)}
+
+    /* ── Buttons ─────────────────────────────────────────── */
+    .btn{display:inline-flex;align-items:center;gap:8px;padding:13px 26px;border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;transition:.25s;border:none;outline:none}
+    .btn-p{background:linear-gradient(135deg,var(--blue),var(--cyan2));color:#fff;box-shadow:0 8px 28px rgba(0,87,255,.35)}
+    .btn-p:hover{transform:translateY(-2px);box-shadow:0 14px 38px rgba(0,87,255,.5)}
+    .btn-s{background:transparent;color:var(--cyan);border:1.5px solid var(--border2);backdrop-filter:blur(8px)}
+    .btn-s:hover{background:rgba(0,212,255,.08);transform:translateY(-2px);border-color:var(--cyan)}
+    .btn-lg{padding:16px 36px;font-size:15px}
+
+    /* ── Ambient blobs ──────────────────────────────────── */
+    .blobs{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+    .blob{position:absolute;border-radius:50%;filter:blur(110px);opacity:.14}
+    .b1{width:620px;height:620px;background:var(--blue);top:-200px;left:-160px;animation:d1 18s ease-in-out infinite}
+    .b2{width:500px;height:500px;background:var(--cyan);bottom:5%;right:-160px;animation:d2 22s ease-in-out infinite}
+    .b3{width:380px;height:380px;background:var(--accent);top:42%;left:32%;animation:d3 26s ease-in-out infinite}
+    @keyframes d1{0%,100%{transform:translate(0,0)}50%{transform:translate(55px,35px)}}
+    @keyframes d2{0%,100%{transform:translate(0,0)}50%{transform:translate(-45px,-28px)}}
+    @keyframes d3{0%,100%{transform:translate(0,0)}33%{transform:translate(25px,-18px)}66%{transform:translate(-18px,28px)}}
+
+    /* ── Nav ─────────────────────────────────────────────── */
+    nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:16px 0;background:rgba(8,13,28,.82);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);transition:.3s}
+    .nav-inner{display:flex;align-items:center;justify-content:space-between}
+    .logo{display:flex;align-items:center;gap:10px;font-size:19px;font-weight:900;letter-spacing:-.4px}
+    .logo-box{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--blue),var(--cyan));display:flex;align-items:center;justify-content:center;font-size:17px;box-shadow:0 4px 16px rgba(0,87,255,.4)}
+    .logo span{color:var(--cyan)}
+    .nav-links{display:flex;gap:28px}
+    .nav-links a{font-size:12.5px;font-weight:600;color:var(--g2);transition:.2s;letter-spacing:.2px}
+    .nav-links a:hover{color:var(--cyan)}
+
+    /* ── Hero ────────────────────────────────────────────── */
+    #hero{min-height:100vh;display:flex;align-items:center;padding:130px 0 70px;overflow:hidden}
+    .hero-wrap{position:relative;z-index:1}
+    /* university badge */
+    .uni-badge{
+      display:inline-flex;align-items:center;gap:10px;
+      background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);
+      border-radius:99px;padding:8px 18px 8px 10px;margin-bottom:28px;font-size:12px;color:var(--g2)
+    }
+    .uni-badge img{width:28px;height:28px;border-radius:50%;object-fit:cover}
+    .hero-title{font-size:clamp(52px,8vw,88px);font-weight:900;line-height:1.03;letter-spacing:-2.5px;margin-bottom:22px}
+    .hero-sub{font-size:clamp(15px,1.8vw,18px);color:var(--g2);max-width:560px;margin-bottom:36px;line-height:1.7}
+    .hero-btns{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:64px}
+    /* grid bg */
+    .grid-bg{position:absolute;inset:0;background-image:linear-gradient(rgba(0,212,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,.04) 1px,transparent 1px);background-size:56px 56px;mask-image:radial-gradient(ellipse 80% 70% at 50% 50%,#000 30%,transparent 100%)}
+    .ring{position:absolute;border-radius:50%;border:1px solid rgba(0,212,255,.07);top:50%;left:50%;transform:translate(-50%,-50%);animation:ring-pulse 9s ease-in-out infinite}
+    .r1{width:360px;height:360px}
+    .r2{width:580px;height:580px;animation-delay:2.5s}
+    .r3{width:820px;height:820px;animation-delay:5s}
+    @keyframes ring-pulse{0%,100%{opacity:.7;transform:translate(-50%,-50%) scale(1)}50%{opacity:.2;transform:translate(-50%,-50%) scale(1.045)}}
+    /* stats */
+    .stats{display:flex;gap:40px;flex-wrap:wrap}
+    .stat .num{font-size:34px;font-weight:900;color:var(--cyan);letter-spacing:-1px}
+    .stat .lbl{font-size:11px;color:var(--g3);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-top:3px}
+
+    /* ── Abstract banner ─────────────────────────────────── */
+    .abstract-bar{
+      background:linear-gradient(135deg,rgba(0,87,255,.09),rgba(0,212,255,.06));
+      border:1px solid var(--border2);border-radius:var(--rl);padding:32px 36px;
+      display:flex;gap:24px;align-items:flex-start;margin-top:0
+    }
+    .abstract-icon{font-size:28px;flex-shrink:0;margin-top:2px}
+    .abstract-bar h3{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--cyan);margin-bottom:8px}
+    .abstract-bar p{font-size:13.5px;color:var(--g1);line-height:1.75}
+
+    /* ── Problem ─────────────────────────────────────────── */
+    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center;margin-top:56px}
+    .threat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--rl);padding:28px;overflow:hidden;position:relative}
+    .threat-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,77,106,.04),transparent)}
+    .threat-item{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:var(--r);background:rgba(255,77,106,.07);border:1px solid rgba(255,77,106,.18);margin-bottom:10px;font-size:12.5px;font-weight:600}
+    .t-icon{font-size:18px;width:32px;text-align:center;flex-shrink:0}
+    .t-txt{flex:1;color:var(--g1)}
+    .t-badge{font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;padding:3px 8px;border-radius:99px;background:rgba(255,77,106,.18);color:var(--red);flex-shrink:0}
+    .point-list{display:flex;flex-direction:column;gap:20px}
+    .pt{display:flex;gap:14px;align-items:flex-start}
+    .pt-num{width:34px;height:34px;border-radius:9px;flex-shrink:0;background:linear-gradient(135deg,var(--blue),var(--cyan2));display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800}
+    .pt-body h4{font-size:14.5px;font-weight:700;margin-bottom:5px}
+    .pt-body p{font-size:12.5px;color:var(--g2);line-height:1.65}
+
+    /* ── Solution flow ───────────────────────────────────── */
+    .flow{display:flex;align-items:flex-start;justify-content:center;flex-wrap:wrap;gap:0;margin-top:52px}
+    .flow-step{flex:1;min-width:130px;text-align:center;padding:24px 16px}
+    .fi{width:62px;height:62px;border-radius:16px;background:var(--card);border:1px solid var(--border2);margin:0 auto 14px;display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:0 6px 24px var(--glow);transition:.3s;position:relative}
+    .flow-step:hover .fi{transform:translateY(-5px)}
+    .fa{font-size:18px;color:var(--cyan2);opacity:.4;flex-shrink:0;padding:0 2px;margin-top:38px}
+    .flow-step h4{font-size:12.5px;font-weight:700;margin-bottom:5px}
+    .flow-step p{font-size:11px;color:var(--g2);line-height:1.5}
+
+    /* ── Features ────────────────────────────────────────── */
+    .feat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(255px,1fr));gap:18px;margin-top:52px}
+    .feat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--rl);padding:26px;transition:.3s;position:relative;overflow:hidden}
+    .feat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--blue),var(--cyan));opacity:0;transition:.3s}
+    .feat-card:hover{transform:translateY(-5px);border-color:var(--border2);box-shadow:0 16px 40px rgba(0,87,255,.14)}
+    .feat-card:hover::before{opacity:1}
+    .feat-card .emoji{font-size:30px;margin-bottom:14px}
+    .feat-card h3{font-size:14.5px;font-weight:700;margin-bottom:7px}
+    .feat-card p{font-size:12.5px;color:var(--g2);line-height:1.65}
+    .feat-tag{display:inline-block;margin-top:12px;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--cyan);background:rgba(0,212,255,.08);padding:3px 9px;border-radius:99px}
+
+    /* ── Dashboard screenshots ───────────────────────────── */
+    .dash-sections{margin-top:52px;display:flex;flex-direction:column;gap:48px}
+    .dash-section{border-radius:var(--rxl);overflow:hidden;position:relative}
+    .dash-label{
+      display:flex;align-items:center;gap:10px;margin-bottom:14px;
+    }
+    .dash-label .num{
+      width:28px;height:28px;border-radius:8px;
+      background:linear-gradient(135deg,var(--blue),var(--cyan));
+      display:flex;align-items:center;justify-content:center;
+      font-size:11px;font-weight:800;flex-shrink:0
+    }
+    .dash-label h3{font-size:15px;font-weight:700}
+    .dash-label p{font-size:12px;color:var(--g2);margin-top:2px}
+    .screenshot-wrap{
+      background:var(--card);border:1px solid var(--border2);border-radius:var(--rl);
+      overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5);position:relative
+    }
+    .browser-bar{
+      background:rgba(6,10,24,.9);padding:10px 14px;display:flex;align-items:center;gap:10px;
+      border-bottom:1px solid var(--border)
+    }
+    .dots{display:flex;gap:5px}
+    .dot{width:9px;height:9px;border-radius:50%}
+    .dr{background:#ff5f57}.dy{background:#febc2e}.dg{background:#28c840}
+    .url-bar{flex:1;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:5px;padding:4px 10px;font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--g2)}
+    .screenshot-wrap img{width:100%;display:block;border-radius:0}
+
+    /* ── How it works ────────────────────────────────────── */
+    .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:52px}
+    .step{background:var(--card);border:1px solid var(--border);border-radius:var(--rl);padding:28px 24px;transition:.3s;position:relative}
+    .step:hover{border-color:var(--border2);transform:translateY(-4px)}
+    .step-n{font-size:44px;font-weight:900;letter-spacing:-2px;background:linear-gradient(135deg,var(--blue),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;margin-bottom:14px;opacity:.85}
+    .step h3{font-size:15px;font-weight:700;margin-bottom:7px}
+    .step p{font-size:12.5px;color:var(--g2);line-height:1.65}
+    .step-arrow{position:absolute;top:50%;right:-18px;font-size:18px;color:var(--cyan2);opacity:.35;transform:translateY(-50%);z-index:2}
+
+    /* ── AI Chatbot sample ───────────────────────────────── */
+    .chat-box{background:var(--card);border:1px solid var(--border2);border-radius:var(--rl);padding:28px;margin-top:52px}
+    .chat-header{display:flex;align-items:center;gap:10px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+    .ai-avatar{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,var(--blue),var(--cyan));display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+    .chat-header h3{font-size:14px;font-weight:700}
+    .chat-header p{font-size:11px;color:var(--g2);margin-top:2px}
+    .qa-list{display:flex;flex-direction:column;gap:20px}
+    .qa{background:var(--navy2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+    .q-row{display:flex;align-items:flex-start;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border)}
+    .q-ico{width:26px;height:26px;border-radius:7px;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;margin-top:1px}
+    .q-txt{font-size:12.5px;font-weight:600;color:var(--g1)}
+    .a-row{display:flex;align-items:flex-start;gap:10px;padding:14px 16px;background:rgba(0,87,255,.07)}
+    .a-ico{width:26px;height:26px;border-radius:7px;background:linear-gradient(135deg,var(--blue),var(--cyan2));display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;margin-top:1px;color:#fff;font-weight:800;font-family:monospace}
+    .a-txt{font-size:12px;color:var(--g1);line-height:1.7}
+    .a-txt strong{color:var(--cyan)}
+
+    /* ── Ethical ─────────────────────────────────────────── */
+    .ethical-box{background:linear-gradient(135deg,rgba(0,87,255,.08),rgba(0,212,255,.05));border:1px solid var(--border2);border-radius:var(--rxl);padding:56px;text-align:center;position:relative;overflow:hidden}
+    .ethical-box::before{content:'';position:absolute;top:-80px;left:50%;transform:translateX(-50%);width:360px;height:260px;border-radius:50%;background:radial-gradient(ellipse,rgba(0,212,255,.08),transparent 70%)}
+    .eth-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-top:36px}
+    .eth-item{text-align:center}
+    .eth-ico{width:52px;height:52px;border-radius:14px;margin:0 auto 12px;background:rgba(0,212,255,.09);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:22px}
+    .eth-item h4{font-size:13.5px;font-weight:700;margin-bottom:5px}
+    .eth-item p{font-size:11.5px;color:var(--g2);line-height:1.65}
+    .vs-row{display:inline-flex;align-items:center;gap:14px;background:rgba(255,77,106,.07);border:1px solid rgba(255,77,106,.18);border-radius:var(--r);padding:12px 22px;margin-top:26px;font-size:12.5px;font-weight:600}
+    .no{color:var(--red);text-decoration:line-through}.sep{color:var(--g3)}.yes{color:var(--accent)}
+    .badge-row{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:28px}
+    .badge{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:8px 16px;font-size:11px;font-weight:700;color:var(--g1);display:flex;align-items:center;gap:7px}
+    .bdot{width:6px;height:6px;border-radius:50%;background:var(--accent)}
+
+    /* ── CTA ─────────────────────────────────────────────── */
+    #cta{text-align:center;padding:112px 0;background:linear-gradient(180deg,transparent,rgba(0,87,255,.07) 50%,transparent)}
+    .cta-title{font-size:clamp(34px,5vw,58px);font-weight:900;letter-spacing:-1.5px;line-height:1.1;margin-bottom:20px;max-width:700px;margin-left:auto;margin-right:auto}
+    .cta-sub{font-size:16px;color:var(--g2);margin-bottom:36px}
+    .cta-note{font-size:11.5px;color:var(--g3);margin-top:14px}
+
+    /* ── Risk scoring table ──────────────────────────────── */
+    .risk-table-wrap{background:var(--card);border:1px solid var(--border2);border-radius:var(--rl);overflow:hidden;margin-top:44px}
+    .rtable{width:100%;border-collapse:collapse}
+    .rtable th{background:rgba(0,87,255,.14);padding:12px 16px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--g2);border-bottom:1px solid var(--border)}
+    .rtable td{padding:11px 16px;font-size:12.5px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--g1)}
+    .rtable tr:last-child td{border-bottom:none}
+    .rtable tr:hover td{background:rgba(0,212,255,.03)}
+    .sev-crit{color:#ff2d55;font-weight:700}.sev-high{color:var(--red);font-weight:700}
+    .sev-med{color:var(--yellow);font-weight:700}.sev-low{color:var(--accent);font-weight:700}
+
+    /* ── Reveal ──────────────────────────────────────────── */
+    .reveal{opacity:0;transform:translateY(28px);transition:opacity .65s,transform .65s}
+    .reveal.vis{opacity:1;transform:translateY(0)}
+    .d1{transition-delay:.1s}.d2{transition-delay:.2s}.d3{transition-delay:.3s}.d4{transition-delay:.4s}
+
+    /* ── Footer ──────────────────────────────────────────── */
+    footer{border-top:1px solid var(--border);padding:36px 0}
+    .foot-inner{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:20px}
+    .foot-links{display:flex;gap:22px;flex-wrap:wrap}
+    .foot-links a{font-size:11.5px;color:var(--g3);transition:.2s}
+    .foot-links a:hover{color:var(--cyan)}
+    .foot-right{text-align:right}
+    .foot-right p{font-size:11px;color:var(--g3);line-height:1.8}
+
+    /* ── Responsive ──────────────────────────────────────── */
+    @media(max-width:900px){.two-col,.steps{grid-template-columns:1fr}.nav-links{display:none}.eth-grid{grid-template-columns:1fr}}
+    @media(max-width:600px){.feat-grid{grid-template-columns:1fr}.ethical-box{padding:36px 20px}.stats{gap:22px}.flow{gap:4px}.fa{display:none}}
+  </style>
+</head>
+<body>
+
+<!-- Blobs -->
+<div class="blobs">
+  <div class="blob b1"></div>
+  <div class="blob b2"></div>
+  <div class="blob b3"></div>
+</div>
+
+<!-- ───────── NAV ──────────────────────────────────────── -->
+<nav id="nav">
+  <div class="container nav-inner">
+    <div class="logo">
+      <div class="logo-box">🔍</div>
+      Cyber<span>Sherlock</span>
+    </div>
+    <div class="nav-links">
+      <a href="#problem">Problem</a>
+      <a href="#solution">Solution</a>
+      <a href="#features">Features</a>
+      <a href="#dashboard">Dashboard</a>
+      <a href="#howitworks">How It Works</a>
+      <a href="#ethical">Ethics</a>
+    </div>
+    <a href="#cta" class="btn btn-p" style="padding:10px 20px;font-size:12.5px;">Start Analysis</a>
+  </div>
+</nav>
+
+<!-- ───────── HERO ─────────────────────────────────────── -->
+<section id="hero">
+  <div class="grid-bg"></div>
+  <div class="ring r1"></div><div class="ring r2"></div><div class="ring r3"></div>
+  <div class="container">
+    <div class="hero-wrap">
+      <!-- University badge -->
+      <div class="uni-badge">
+        <img src="images/image1.jpeg" alt="University of Bahrain" onerror="this.style.display='none'" style="display: none;">
+        University of Bahrain · College of Information Technology · B.Sc. Cybersecurity
+      </div>
+      <div class="chip">AI-Powered Cybersecurity Intelligence · ITCY 499 Senior Project</div>
+      <h1 class="hero-title"><span class="grad">CyberSherlock</span></h1>
+      <p class="hero-sub">AI-Assisted External Attack Surface Management (EASM) platform that utilizes passive Open-Source Intelligence (OSINT) to map and analyze your organization's publicly exposed digital assets — without intrusion.</p>
+      <div class="hero-btns">
+        <a href="#dashboard" class="btn btn-p btn-lg">🔬 View Demo Dashboard</a>
+        <a href="#features" class="btn btn-s btn-lg">✦ Explore Features</a>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="num">8+</div><div class="lbl">OSINT Modules</div></div>
+        <div class="stat"><div class="num">90%</div><div class="lbl">Passive Only</div></div>
+        <div class="stat"><div class="num">OWASP</div><div class="lbl">Aligned AI</div></div>
+        <div class="stat"><div class="num">Flask</div><div class="lbl">Python Backend</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ───────── ABSTRACT ─────────────────────────────────── -->
+<section style="padding:0 0 80px">
+  <div class="container">
+    <div class="abstract-bar reveal">
+      <div class="abstract-icon">📄</div>
+      <div>
+        <h3>Project Abstract</h3>
+        <p>CyberSherlock is an AI-assisted External Attack Surface Management (EASM) system developed at the University of Bahrain that addresses organizations' struggle to identify unmanaged assets and evaluate their associated risks. It utilizes passive Open-Source Intelligence (OSINT) techniques and HTML parsing to map infrastructure components such as DNS records, SSL certificates, and IP addresses. Built on Python and Flask, the system integrates a specialized AI security advisor aligned with OWASP standards. Testing on environments like OWASP Juice Shop demonstrated the system's efficiency in identifying critical vulnerabilities and outdated protocols within seconds.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ───────── PROBLEM ──────────────────────────────────── -->
+<section id="problem" class="alt-bg">
+  <div class="container">
+    <div class="text-center reveal">
+      <div class="chip">The Problem</div>
+      <h2 class="section-title">Organizations Don't Know<br><span class="cyan-c">What Attackers Can See</span></h2>
+      <p class="section-sub">As organizations increasingly depend on internet-facing services, websites, APIs, cloud platforms, and third-party providers — managing and understanding external cybersecurity exposure has become more challenging than ever.</p>
+    </div>
+    <div class="two-col">
+      <div class="threat-card reveal d1">
+        <div class="threat-item">
+          <div class="t-icon">🌐</div>
+          <div class="t-txt">DNS records publicly expose internal infrastructure layout</div>
+          <div class="t-badge">High Risk</div>
+        </div>
+        <div class="threat-item">
+          <div class="t-icon">📋</div>
+          <div class="t-txt">WHOIS data reveals admin contacts, registrar & org structure</div>
+          <div class="t-badge">Medium</div>
+        </div>
+        <div class="threat-item">
+          <div class="t-icon">🔓</div>
+          <div class="t-txt">Expired or misconfigured SSL certificates create trust issues</div>
+          <div class="t-badge">Critical</div>
+        </div>
+        <div class="threat-item">
+          <div class="t-icon">🕸️</div>
+          <div class="t-txt">Third-party dependencies with outdated or vulnerable software</div>
+          <div class="t-badge">High Risk</div>
+        </div>
+        <div class="threat-item">
+          <div class="t-icon">📱</div>
+          <div class="t-txt">Social media reveals employee roles, email formats & technologies</div>
+          <div class="t-badge">Medium</div>
+        </div>
+        <div class="threat-item">
+          <div class="t-icon">🔍</div>
+          <div class="t-txt">Forgotten subdomains and cloud instances expand attack surface</div>
+          <div class="t-badge">High Risk</div>
+        </div>
+      </div>
+      <div class="point-list reveal d2">
+        <div class="pt">
+          <div class="pt-num">01</div>
+          <div class="pt-body">
+            <h4>The Blind Spot Problem</h4>
+            <p>Organizations continuously publish data across websites, social media, repositories, and professional networks. This large amount of publicly accessible information creates new cybersecurity concerns as attackers can gather and correlate exposed data from multiple online sources.</p>
+          </div>
+        </div>
+        <div class="pt">
+          <div class="pt-num">02</div>
+          <div class="pt-body">
+            <h4>Unmanaged External Assets</h4>
+            <p>Developers constantly add new websites, services, and applications while older assets may be overlooked. Digital boundaries have become dynamic due to cloud instances, forgotten subdomains, and third-party APIs — creating an invisible perimeter.</p>
+          </div>
+        </div>
+        <div class="pt">
+          <div class="pt-num">03</div>
+          <div class="pt-body">
+            <h4>Manual Analysis Doesn't Scale</h4>
+            <p>Information such as employee details, email structures, technologies, DNS records, and infrastructure-related data may unintentionally reveal valuable insights about an organization's environment to any attacker.</p>
+          </div>
+        </div>
+        <div class="pt">
+          <div class="pt-num">04</div>
+          <div class="pt-body">
+            <h4>No Structured Risk Visibility</h4>
+            <p>Without automated scoring and AI-guided recommendations, security teams cannot effectively prioritize which exposures pose the greatest risk or determine whether publicly available information may introduce cybersecurity risks.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ───────── SOLUTION ─────────────────────────────────── -->
+<section id="solution">
+  <div class="container">
+    <div class="text-center reveal">
+      <div class="chip">The Solution</div>
+      <h2 class="section-title">Passive. Intelligent.<br><span class="grad">Actionable.</span></h2>
+      <p class="section-sub">CyberSherlock operates as a passive OSINT analysis tool that processes uploaded HTML files to collect, analyze, and present publicly available cybersecurity exposure information in a structured and user-friendly manner — without performing intrusive scanning, penetration testing, or exploitation activities.</p>
+    </div>
+    <div class="flow reveal d1">
+      <div class="flow-step">
+        <div class="fi">📄</div>
+        <h4>HTML Upload</h4>
+        <p>Locally saved webpage HTML is the primary passive data source</p>
+      </div>
+      <div class="fa">→</div>
+      <div class="flow-step">
+        <div class="fi">🥣</div>
+        <h4>BeautifulSoup Parse</h4>
+        <p>Extracts links, hosts, scripts, forms & external references</p>
+      </div>
+      <div class="fa">→</div>
+      <div class="flow-step">
+        <div class="fi">🌐</div>
+        <h4>Host Discovery</h4>
+        <p>Unique hostnames, subdomains & main domain identified</p>
+      </div>
+      <div class="fa">→</div>
+      <div class="flow-step">
+        <div class="fi">🛰️</div>
+        <h4>OSINT Collection</h4>
+        <p>DNS, WHOIS, SSL, IP, ASN data from public sources</p>
+      </div>
+      <div class="fa">→</div>
+      <div class="flow-step">
+        <div class="fi">📊</div>
+        <h4>Risk Scoring</h4>
+        <p>Severity-weighted baseline score across all findings</p>
+      </div>
+      <div class="fa">→</div>
+      <div class="flow-step">
+        <div class="fi">🤖</div>
+        <h4>AI Advisor</h4>
+        <p>OWASP-aligned recommendations via AI chatbot</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ───────── FEATURES ─────────────────────────────────── -->
+<section id="features" class="alt-bg">
+  <div class="container">
+    <div class="text-center reveal">
+      <div class="chip">Core Features</div>
+      <h2 class="section-title">Eight Intelligence Modules<br><span class="cyan-c">for Complete Exposure Mapping</span></h2>
+      <p class="section-sub">Each module collects, analyzes, and presents a specific dimension of your organization's external digital footprint using only publicly accessible information.</p>
+    </div>
+    <div class="feat-grid">
+      <div class="feat-card reveal d1">
+        <div class="emoji">🛰️</div>
+        <h3>Passive OSINT Collection</h3>
+        <p>Aggregates publicly available information from DNS records, WHOIS information, SSL certificate data, IP ownership, ASN details, and reverse DNS — all without sending intrusive packets to the target.</p>
+        <div class="feat-tag">Core Engine</div>
+      </div>
+      <div class="feat-card reveal d2">
+        <div class="emoji">🌐</div>
+        <h3>DNS & WHOIS Analysis</h3>
+        <p>Collects record types A, AAAA, MX, NS, TXT, and CNAME along with WHOIS registration details such as domain name, registrar, creation date, expiration date, organization, and name servers.</p>
+        <div class="feat-tag">DNS Intelligence</div>
+      </div>
+      <div class="feat-card reveal d3">
+        <div class="emoji">🔐</div>
+        <h3>SSL Certificate Inspection</h3>
+        <p>Shows certificate status, subject common name, issuer, validity dates, days remaining before expiration, serial number, and Subject Alternative Names (SAN) to detect misconfigurations.</p>
+        <div class="feat-tag">TLS Analysis</div>
+      </div>
+      <div class="feat-card reveal d1">
+        <div class="emoji">🗺️</div>
+        <h3>IP Ownership Mapping</h3>
+        <p>Displays IP address, ASN, ASN description, network name, and country for all identified IP addresses — providing context about discovered hosting infrastructure and network ownership.</p>
+        <div class="feat-tag">Network Intelligence</div>
+      </div>
+      <div class="feat-card reveal d2">
+        <div class="emoji">📡</div>
+        <h3>External Exposure Analysis</h3>
+        <p>Identifies publicly exposed assets, third-party dependencies, unresolved hosts, and potentially risky external services. Shows hostname, classification, risk level, resolved IP, and reverse DNS.</p>
+        <div class="feat-tag">Host Analysis</div>
+      </div>
+      <div class="feat-card reveal d3">
+        <div class="emoji">📊</div>
+        <h3>Baseline Risk Scoring</h3>
+        <p>Generates baseline risk scores based on collected findings and categorizes them into Low, Medium, High, and Critical severity levels — evaluating exposed hosts, third-party dependencies, and detected findings.</p>
+        <div class="feat-tag">Risk Engine</div>
+      </div>
+      <div class="feat-card reveal d1">
+        <div class="emoji">📱</div>
+        <h3>Social Media Intelligence</h3>
+        <p>Collects publicly available social media information related to organizations, domains, and employees to identify exposed organizational references and information that could support social engineering.</p>
+        <div class="feat-tag">SOCMINT</div>
+      </div>
+      <div class="feat-card reveal d2">
+        <div class="emoji">🤖</div>
+        <h3>AI Security Advisor</h3>
+        <p>Provides AI-assisted analysis and remediation recommendations aligned with OWASP security practices. The AI chatbot uses collected OSINT findings and baseline risk analysis to generate contextual recommendations.</p>
+        <div class="feat-tag">AI-Powered</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ───────── RISK SCORING TABLE ───────────────────────── -->
+<section style="padding:60px 0 80px">
+  <div class="container">
+    <div class="reveal">
+      <div class="chip">Risk Model</div>
+      <h2 class="section-title">Baseline Risk <span class="cyan-c">Scoring Model</span></h2>
+      <p class="section-sub">CyberSherlock evaluates findings across multiple categories and assigns severity-weighted scores to produce a consolidated risk level for the organization's external exposure.</p>
+    </div>
+    <div class="risk-table-wrap reveal d1">
+      <table class="rtable">
+        <thead>
+          <tr><th>Finding Category</th><th>Severity</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Zone Transfer Enabled</td><td><span class="sev-crit">Critical</span></td><td>Allows full DNS namespace enumeration by attackers</td></tr>
+          <tr><td>Expired SSL Certificate</td><td><span class="sev-high">High</span></td><td>Certificate has passed its validity date — untrusted connection</td></tr>
+          <tr><td>SSL Certificate Expiring Soon</td><td><span class="sev-high">High</span></td><td>Certificate will expire within 30 days — renewal required</td></tr>
+          <tr><td>Third-Party Hosts Detected</td><td><span class="sev-med">Medium</span></td><td>External hosts referenced — may expand attack surface</td></tr>
+          <tr><td>WHOIS Admin Contact Exposed</td><td><span class="sev-med">Medium</span></td><td>Public WHOIS reveals admin email and contact information</td></tr>
+          <tr><td>Missing Certificate Information</td><td><span class="sev-med">Medium</span></td><td>SSL certificate data incomplete or unavailable</td></tr>
+          <tr><td>Social Media Exposure</td><td><span class="sev-low">Low</span></td><td>Organizational or employee data discoverable via public profiles</td></tr>
+          <tr><td>Resolved External IP Detected</td><td><span class="sev-low">Low</span></td><td>IP address publicly associated with target infrastructure</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ───────── DASHBOARD SCREENSHOTS ───────────────────── -->
+<section id="dashboard" class="alt-bg">
+  <div class="container">
+    <div class="text-center reveal">
+      <div class="chip">Live Dashboard</div>
+      <h2 class="section-title">Real Dashboard <span class="grad">Screenshots</span></h2>
+      <p class="section-sub">The CyberSherlock dashboard presents collected OSINT data through a centralized single-page interface with organized sections, contextual explanations, and structured visual presentation.</p>
+    </div>
+
+    <div class="dash-sections">
+
+      <!-- 1 Summary Cards -->
+      <div class="dash-section reveal d1">
+        <div class="dash-label">
+          <div class="num">1</div>
+          <div>
+            <h3>Dashboard Overview — Summary Cards</h3>
+            <p>Displays organization name, main domain, discovered subdomains, total hosts, unique IPs, and baseline risk score at a glance.</p>
+          </div>
+        </div>
+        <div class="screenshot-wrap">
+          <div class="browser-bar">
+            <div class="dots"><div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div></div>
+            <div class="url-bar">🔒 localhost:5000 — CyberSherlock Dashboard</div>
+          </div>
+          <img src="images/image3.png" alt="CyberSherlock Summary Cards Dashboard" loading="lazy">
+        </div>
+      </div>
+
+      <!-- 2 Security Findings -->
+      <div class="dash-section reveal d2">
+        <div class="dash-label">
+          <div class="num">2</div>
+          <div>
+            <h3>Security Findings & Exposure Analysis</h3>
+            <p>Each finding is displayed with severity level (Low / Medium / High / Critical), category, title, and a simplified explanation for users with limited technical knowledge.</p>
+          </div>
+        </div>
+        <div class="screenshot-wrap">
+          <div class="browser-bar">
+            <div class="dots"><div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div></div>
+            <div class="url-bar">🔒 localhost:5000 — Security Findings Interface</div>
+          </div>
+          <img src="images/image4.png" alt="Security Findings Interface" loading="lazy">
+        </div>
+      </div>
+
+      <!-- 3 Domain & Subdomains -->
+      <div class="dash-section reveal d1">
+        <div class="dash-label">
+          <div class="num">3</div>
+          <div>
+            <h3>Domain Registration & Subdomain Information</h3>
+            <p>Shows domain name, registrar, creation date, expiration date, organization, and name servers — alongside discovered subdomains from the saved HTML file.</p>
+          </div>
+        </div>
+        <div class="screenshot-wrap">
+          <div class="browser-bar">
+            <div class="dots"><div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div></div>
+            <div class="url-bar">🔒 localhost:5000 — Domain & Subdomain Information</div>
+          </div>
+          <img src="images/image5.png" alt="Domain and Subdomain Information Interface" loading="lazy">
+        </div>
+      </div>
+
+      <!-- 4 Host Analysis -->
+      <div class="dash-section reveal d2">
+        <div class="dash-label">
+          <div class="num">4</div>
+          <div>
+            <h3>Host Analysis Interface</h3>
+            <p>Shows each discovered host with its classification, risk level, risk score, resolved IP address, reverse DNS value, and the reason behind the assigned risk.</p>
+          </div>
+        </div>
+        <div class="screenshot-wrap">
+          <div class="browser-bar">
+            <div class="dots"><div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div></div>
+            <div class="url-bar">🔒 localhost:5000 — Host Analysis</div>
+          </div>
+          <img src="images/image6.png" alt="Host Analysis Interface" loading="lazy">
+        </div>
+      </div>
+
+      <!-- 5 SSL Certificates -->
+      <div class="dash-section reveal d1">
+        <div class="dash-label">
+          <div class="num">5</div>
+          <div>
+            <h3>SSL Certificate Information</h3>
+            <p>Displays certificate status, subject common name, issuer, validity dates, days remaining before expiration, serial number, and Subject Alternative Names (SAN).</p>
+          </div>
+        </div>
+        <div class="screenshot-wrap">
+          <div class="browser-bar">
+            <div class="dots"><div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div></div>
+            <div class="url-bar">🔒 localhost:5000 — SSL Certificates</div>
+          </div>
+          <img src="images/image7.png" alt="SSL Certificate Interface" loading="lazy">
+        </div>
+      </div>
+
+      <!-- 6 DNS Records -->
+      <div class="dash-section reveal d2">
+        <div class="dash-label">
+          <div class="num">6</div>
+          <div>
+            <h3>DNS Records Interface</h3>
+            <p>Displays record types A, AAAA, MX, NS, TXT, and CNAME with their values and a short explanation of each record type to help users understand the domain's public configuration.</p>
+          </div>
+        </div>
+        <div class="screenshot-wrap">
+          <div class="browser-bar">
+            <div class="dots"><div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div></div>
+            <div class="url-bar">🔒 localhost:5000 — DNS Records</div>
+          </div>
+          <img src="images/image8.png" alt="DNS Records Interface" loading="lazy">
+        </div>
+      </div>
+
+      <!-- 7 IP Ownership -->
+      <div class="dash-section reveal d1">
+        <div class="dash-label">
+          <div class="num">7</div>
+          <div>
+            <h3>IP Ownership & Network Information</h3>
+            <p>Displays IP address, ASN, ASN description, network name, and country for each identified IP — providing additional context about discovered infrastructure ownership.</p>
+          </div>
+        </div>
+        <div class="screenshot-wrap">
+          <div class="browser-bar">
+            <div class="dots"><div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div></div>
+            <div class="url-bar">🔒 localhost:5000 — IP Ownership & Network</div>
+          </div>
+          <img src="images/image9.png" alt="IP Ownership Interface" loading="lazy">
+        </div>
+      </div>
+
+      <!-- 8 AI Chatbot -->
+      <div class="dash-section reveal d2">
+        <div class="dash-label">
+          <div class="num">8</div>
+          <div>
+            <h3>CyberSherlock AI Security Advisor</h3>
+            <p>An interactive AI chatbot that answers security questions and provides OWASP-aligned remediation recommendations based on collected OSINT findings and baseline risk analysis.</p>
+          </div>
+        </div>
+        <div class="screenshot-wrap">
+          <div class="browser-bar">
+            <div class="dots"><div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div></div>
+            <div class="url-bar">🔒 localhost:5000 — AI Security Advisor</div>
+          </div>
+          <img src="images/image10.png" alt="AI Security Advisor Chatbot" loading="lazy">
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ───────── HOW IT WORKS ─────────────────────────────── -->
+<section id="howitworks">
+  <div class="container">
+    <div class="text-center reveal">
+      <div class="chip">How It Works</div>
+      <h2 class="section-title">From HTML File to<br><span class="cyan-c">Complete Intelligence Report</span></h2>
+      <p class="section-sub">A structured six-stage pipeline that transforms a saved webpage HTML into a complete external attack surface analysis — all using passive techniques only.</p>
+    </div>
+    <div class="steps">
+      <div class="step reveal d1">
+        <div class="step-n">01</div>
+        <h3>Upload HTML Source</h3>
+        <p>A locally saved copy of the organization's main webpage HTML file is provided as the primary data source. The Flask application verifies the file and reads its content into memory for processing.</p>
+        <div class="step-arrow">→</div>
+      </div>
+      <div class="step reveal d2">
+        <div class="step-n">02</div>
+        <h3>Extract Hosts & Domains</h3>
+        <p>BeautifulSoup parses the HTML and scans tags for attributes like href, src, action, data-src, and srcset. Hostnames are extracted, normalized, and deduplicated. The most-repeated registered domain is selected as the main domain.</p>
+        <div class="step-arrow">→</div>
+      </div>
+      <div class="step reveal d3">
+        <div class="step-n">03</div>
+        <h3>Collect Passive OSINT</h3>
+        <p>The Passive OSINT Data Collection Module queries public APIs and databases for DNS records, WHOIS information, SSL certificate details, reverse DNS, ASN details, and IP ownership information — all without direct interaction with the target.</p>
+      </div>
+      <div class="step reveal d1">
+        <div class="step-n">04</div>
+        <h3>Analyze External Exposure</h3>
+        <p>Collected OSINT data is analyzed to identify publicly exposed assets, third-party dependencies, unresolved hosts, and potentially risky external services associated with the target organization.</p>
+        <div class="step-arrow">→</div>
+      </div>
+      <div class="step reveal d2">
+        <div class="step-n">05</div>
+        <h3>Generate Risk Score</h3>
+        <p>A severity-weighted scoring algorithm evaluates each finding — exposed hosts, third-party dependencies, missing information, and detected vulnerabilities — to produce a consolidated Baseline Risk Score from 0–100 with category breakdowns.</p>
+        <div class="step-arrow">→</div>
+      </div>
+      <div class="step reveal d3">
+        <div class="step-n">06</div>
+        <h3>Social Media</h3>
+        <p>This feature automatically identifies the target's presence across multiple platforms, including Instagram, X (Twitter), LinkedIn, and others. By scanning the HTML source, CyberSherlock extracts these social handles and links them together. This process helps in visualizing the full digital footprint of the target, making it easier to see how different accounts are interconnected and related to the main domain.</p>
+      </div>
+      <div class="step reveal d3">
+        <div class="step-n">07</div>
+        <h3>AI Recommendations</h3>
+        <p>The CyberSherlock AI Security Advisor processes all findings and generates prioritized, context-aware remediation recommendations aligned with OWASP security practices to help users understand and mitigate identified risks.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ───────── AI CHATBOT SAMPLE ────────────────────────── -->
+<section class="alt-bg" style="padding:60px 0 96px">
+  <div class="container">
+    <div class="reveal">
+      <div class="chip">AI Advisor — Real Interaction Log</div>
+      <h2 class="section-title">CyberSherlock <span class="cyan-c">AI Security Advisor</span></h2>
+      <p class="section-sub">The AI chatbot uses collected OSINT findings and baseline risk analysis to generate contextual, OWASP-aligned security recommendations. Below are actual interaction examples from system testing.</p>
+    </div>
+    <div class="chat-box reveal d1">
+      <div class="chat-header">
+        <div class="ai-avatar">🤖</div>
+        <div>
+          <h3>CyberSherlock Security Advisor</h3>
+          <p>OWASP-aligned AI · Powered by collected OSINT findings</p>
+        </div>
+      </div>
+      <div class="qa-list">
+        <div class="qa">
+          <div class="q-row">
+            <div class="q-ico">👤</div>
+            <div class="q-txt">Can you justify the current Risk Score? Tell me which factor contributed most to this level.</div>
+          </div>
+          <div class="a-row">
+            <div class="a-ico">AI</div>
+            <div class="a-txt">Based on the EASM scan results provided, the overall Risk Score is <strong>22/100 (Low)</strong>. The main contributor is the <strong>"Third-party hosts detected"</strong> finding with a severity of Medium. This indicates one external host was found in the saved HTML, which may expand external exposure. The finding suggests dependencies on external resources that are outside direct organizational control.</div>
+          </div>
+        </div>
+        <div class="qa">
+          <div class="q-row">
+            <div class="q-ico">👤</div>
+            <div class="q-txt">Provide a top-3 priority action plan for the IT team to reduce our external attack surface.</div>
+          </div>
+          <div class="a-row">
+            <div class="a-ico">AI</div>
+            <div class="a-txt"><strong>[SECURITY ALERT]</strong> Based on the results, I recommend:<br><br>1. <strong>Vulnerability Remediation:</strong> Review identified third-party hosts (e.g., external domains found in HTML source) and assess whether they are necessary dependencies.<br><br>2. <strong>Network Segmentation:</strong> Isolate and restrict access to sensitive areas to minimize the impact of external dependency exposure.<br><br>3. <strong>Regular Security Audits:</strong> Schedule periodic passive OSINT monitoring to detect new threats and changes to your external attack surface in a timely manner.</div>
+          </div>
+        </div>
+        <div class="qa">
+          <div class="q-row">
+            <div class="q-ico">👤</div>
+            <div class="q-txt">Given that "Third-party hosts" are the main risk factor, provide a technical recommendation to harden web assets and mitigate potential supply chain attacks.</div>
+          </div>
+          <div class="a-row">
+            <div class="a-ico">AI</div>
+            <div class="a-txt"><strong>Technical Recommendation:</strong><br><br>1. <strong>Inventory and Monitoring:</strong> Conduct a comprehensive inventory of all third-party libraries, CDNs, and external scripts referenced in your web assets.<br><br>2. <strong>Vulnerability Scanning:</strong> Perform regular passive scans against known CVE databases for all identified third-party dependencies to detect outdated or vulnerable components.<br><br>3. <strong>Subresource Integrity (SRI):</strong> Implement SRI hashes on all externally loaded scripts and stylesheets to prevent tampering — as recommended by OWASP A06: Vulnerable and Outdated Components.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ───────── ETHICAL SECTION ─────────────────────────── -->
+<section id="ethical">
+  <div class="container">
+    <div class="ethical-box reveal">
+      <div class="chip" style="margin-bottom:14px">Ethical Security Research</div>
+      <h2 class="section-title">Built on <span class="grad">Responsible Intelligence</span></h2>
+      <p style="color:var(--g2);max-width:580px;margin:14px auto 0;font-size:14.5px;line-height:1.7">CyberSherlock follows ethical cybersecurity practices by relying only on passive Open-Source Intelligence (OSINT) collection methods. The platform avoids intrusive scanning, penetration testing, exploitation activities, or direct interaction with target systems.</p>
+      <div class="vs-row">
+        <span class="no">Active Scanning</span>
+        <span class="sep">·</span>
+        <span class="no">Exploitation</span>
+        <span class="sep">·</span>
+        <span class="no">Penetration Testing</span>
+        <span class="sep">·</span>
+        <span class="yes">✓ Passive OSINT Only</span>
+      </div>
+      <div class="eth-grid">
+        <div class="eth-item">
+          <div class="eth-ico">🛡️</div>
+          <h4>Zero Intrusion</h4>
+          <p>CyberSherlock never sends probes or intrusive requests to target systems. All data is sourced from public records without generating detectable network traffic.</p>
+        </div>
+        <div class="eth-ico-item" style="text-align:center">
+          <div class="eth-ico" style="width:52px;height:52px;border-radius:14px;margin:0 auto 12px;background:rgba(0,212,255,.09);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:22px">⚖️</div>
+          <h4 style="font-size:13.5px;font-weight:700;margin-bottom:5px">Legal & Compliant</h4>
+          <p style="font-size:11.5px;color:var(--g2);line-height:1.65">Operates exclusively using publicly accessible information only — no unauthorized access, no grey-area techniques, no credential harvesting.</p>
+        </div>
+        <div class="eth-item">
+          <div class="eth-ico">📖</div>
+          <h4>OWASP Aligned</h4>
+          <p>All AI recommendations and risk assessments follow OWASP Top 10 and established security frameworks, validated before being presented to users.</p>
+        </div>
+      </div>
+      <div class="badge-row">
+        <div class="badge"><div class="bdot"></div>Passive OSINT Only</div>
+        <div class="badge"><div class="bdot"></div>OWASP Top 10 Aligned</div>
+        <div class="badge"><div class="bdot"></div>No Active Scanning</div>
+        <div class="badge"><div class="bdot"></div>No Penetration Testing</div>
+        <div class="badge"><div class="bdot"></div>No Credential Harvesting</div>
+        <div class="badge"><div class="bdot"></div>Responsible Disclosure</div>
+        <div class="badge"><div class="bdot"></div>Tested on OWASP Juice Shop</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ───────── TECH STACK ───────────────────────────────── -->
+<section class="alt-bg" style="padding:56px 0">
+  <div class="container">
+    <div class="text-center reveal" style="margin-bottom:28px">
+      <p style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--g3)">Technologies Used</p>
+    </div>
+    <div class="badge-row reveal">
+      <div class="badge" style="border-color:var(--border2)">🐍 Python</div>
+      <div class="badge" style="border-color:var(--border2)">⚗️ Flask Web Framework</div>
+      <div class="badge" style="border-color:var(--border2)">🥣 BeautifulSoup</div>
+      <div class="badge" style="border-color:var(--border2)">🌐 WHOIS / DNS APIs</div>
+      <div class="badge" style="border-color:var(--border2)">🔐 SSL / TLS Analysis</div>
+      <div class="badge" style="border-color:var(--border2)">📡 ASN & IP OSINT</div>
+      <div class="badge" style="border-color:var(--border2)">🤖 AI / LLM Integration</div>
+      <div class="badge" style="border-color:var(--border2)">⚖️ OWASP Standards</div>
+      <div class="badge" style="border-color:var(--border2)">🧪 OWASP Juice Shop Testing</div>
+    </div>
+  </div>
+</section>
+
+<!-- ───────── CTA ──────────────────────────────────────── -->
+<section id="cta">
+  <div class="container">
+    <div class="reveal text-center">
+      <h2 class="cta-title">Understand your public exposure<br><span class="grad">before attackers do.</span></h2>
+      <p class="cta-sub">Upload an HTML source file and get a complete external attack surface analysis — passive, ethical, and OWASP-aligned.</p>
+      <a href="#" class="btn btn-p btn-lg" style="font-size:16px;padding:18px 44px">🔍 Start Analysis</a>
+      <p class="cta-note">University of Bahrain · ITCY 499 Senior Project · Passive OSINT Only · No Active Scanning · OWASP Aligned</p>
+    </div>
+  </div>
+</section>
+
+<!-- ───────── FOOTER ───────────────────────────────────── -->
+<footer>
+  <div class="container">
+    <div class="foot-inner">
+
+      <div>
+        <div class="logo" style="font-size:16px;margin-bottom:12px">
+          <div class="logo-box" style="width:28px;height:28px;font-size:13px;border-radius:8px">🔍</div>
+          Cyber<span>Sherlock</span>
+        </div>
+
+        <div class="foot-links">
+          <a href="#problem">Problem</a>
+          <a href="#solution">Solution</a>
+          <a href="#features">Features</a>
+          <a href="#dashboard">Dashboard</a>
+          <a href="#howitworks">How It Works</a>
+          <a href="#ethical">Ethics</a>
+        </div>
+      </div>
+
+      <div class="foot-right">
+
+        <p>
+          <strong style="color:var(--g1)">
+            ITCY 499 Senior Project · Academic Year 2025–2026
+          </strong>
+        </p>
+
+        <p>
+          University of Bahrain · College of Information Technology
+        </p>
+
+        <p>
+          Department of Information Systems · B.Sc. in Cybersecurity
+        </p>
+
+        <p style="margin-top:10px">
+          📧
+          <a
+            href="mailto:info@cybersherlock.it.com"
+            style="color:var(--cyan);font-weight:600"
+          >
+            info@cybersherlock.it.com
+          </a>
+        </p>
+
+        <p style="margin-top:6px;color:var(--g2)">
+          Lulwa Abdullateef Ebrahim · Fatima Mohamed Jahrami · Shaima Waleed Mohammed
+        </p>
+
+        <p style="font-size:10px;margin-top:4px">
+          Supervised by Dr. Abdulla Khalifa Aldoseri & Mrs. Alya Sayed Husain Alkameli
+        </p>
+
+        <p style="margin-top:8px;font-size:10px;color:var(--g3)">
+          © 2026 CyberSherlock — Passive OSINT · OWASP Aligned
+        </p>
+
+      </div>
+
+    </div>
+  </div>
+</footer>
+
+<!-- ───────── JS ───────────────────────────────────────── -->
+<script>
+  // Scroll reveal
+  const els = document.querySelectorAll('.reveal');
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('vis'); });
+  }, { threshold: 0.08, rootMargin: '0px 0px -50px 0px' });
+  els.forEach(e => obs.observe(e));
+
+  // Nav scroll
+  const nav = document.getElementById('nav');
+  window.addEventListener('scroll', () => {
+    nav.style.background = window.scrollY > 60 ? 'rgba(7,11,23,.97)' : 'rgba(8,13,28,.82)';
+    nav.style.borderBottomColor = window.scrollY > 60 ? 'rgba(0,212,255,.16)' : 'rgba(0,212,255,.1)';
+  });
+
+  // Active nav link
+  const secs = document.querySelectorAll('section[id]');
+  const links = document.querySelectorAll('.nav-links a');
+  window.addEventListener('scroll', () => {
+    let cur = '';
+    secs.forEach(s => { if (window.scrollY >= s.offsetTop - 130) cur = s.id; });
+    links.forEach(a => { a.style.color = a.getAttribute('href') === '#'+cur ? 'var(--cyan)' : ''; });
+  });
+</script>
+
+
+</body></html>
